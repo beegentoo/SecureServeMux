@@ -9,25 +9,25 @@ Usage of SecureServeMux is easy. The main goal was, that `http.ServeMux` can eas
 
 Example:
 ```go
-    var serveMux *http.ServeMux := http.NewServeMux()
+var serveMux *http.ServeMux := http.NewServeMux()
 
-    serveMux.HandleFunc("/slash_a", func (w http.ResponseWriter, r *http.Request) {
-      // Some code
-    })
+serveMux.HandleFunc("/slash_a", func (w http.ResponseWriter, r *http.Request) {
+  // Some code
+})
 ```
 With SecureServeMux changes to the relevant code are minimal:
 ```go
-    var authenticator Authenticator = jwtauth.NewKeycloakJWTAuth(
-      "http://keycloakinstance.local.network",
-      "MyDemoRealm",
-      jwtauth.NewRoleBasedAccess()
-    )
-  
-    var serveMux *secureservemux.SecureServeMux = secureservemux.NewSecureServeMux(authenticator)
+var authenticator Authenticator = jwtauth.NewKeycloakJWTAuth(
+  "http://keycloakinstance.local.network",
+  "MyDemoRealm",
+  jwtauth.NewRoleBasedAccess()
+)
 
-    serveMux.AuthHandleFunc("/slash_a", func (w http.ResponseWriter, r *http.Request) {
-      // some Code
-    })
+var serveMux *secureservemux.SecureServeMux = secureservemux.NewSecureServeMux(authenticator)
+
+serveMux.AuthHandleFunc("/slash_a", func (w http.ResponseWriter, r *http.Request) {
+  // some Code
+})
 ```
 A slightly more complex example can be seen in the (currently) lone [Test-File](./jwtauth/KeycloakJWTAuthenticator_test.go)
 ## Authenticators
