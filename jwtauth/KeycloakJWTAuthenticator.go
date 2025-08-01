@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -41,7 +39,6 @@ func NewKeycloakJWTAuth(url string, realm string, strategy AuthorizationStrategy
 			certRetrieverFunc,
 			strategy,
 		),
-		Logger: log.New(os.Stdout, "KeycloakJWT: ", log.LstdFlags),
 	}
 	return kka
 }
@@ -49,9 +46,8 @@ func NewKeycloakJWTAuth(url string, realm string, strategy AuthorizationStrategy
 // Authenticates a JWT issued by a Keycloak Instance
 type KeycloakJWTAuthenticator struct {
 	GenericJWTAuthenticator
-	Url    string // Base URL of the keycloak instance to use
-	Realm  string // Realm that managed the authentication
-	Logger *log.Logger
+	Url   string // Base URL of the keycloak instance to use
+	Realm string // Realm that managed the authentication
 }
 
 // Load keycloak's JSON Web Key Set

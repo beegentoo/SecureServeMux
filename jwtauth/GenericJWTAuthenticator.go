@@ -4,9 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,7 +18,6 @@ type CertRetrieverFunc func(token *jwt.Token) (string, error)
 
 func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFunc, strategy AuthorizationStrategy) GenericJWTAuthenticator {
 	return GenericJWTAuthenticator{
-		Logger:            log.New(os.Stdout, "GenericJWTAuthenticator: ", log.LstdFlags),
 		Issuer:            issuer,
 		CertRetrieverFunc: certRetrieverFunc,
 		Strategy:          strategy,
@@ -34,9 +31,8 @@ func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFu
 // The CertRetrieverFunc should return a string-representation of a Certificate (with or without
 // header- and footer-line)
 type GenericJWTAuthenticator struct {
-	Issuer            string            // Issuer to expect
-	CertRetrieverFunc CertRetrieverFunc // Function to retrieve the issuer certificate
-	Logger            *log.Logger
+	Issuer            string                // Issuer to expect
+	CertRetrieverFunc CertRetrieverFunc     // Function to retrieve the issuer certificate
 	Strategy          AuthorizationStrategy // Authorization strategy to be used
 }
 
@@ -44,36 +40,23 @@ type GenericJWTAuthenticator struct {
 //
 // Returns true and no error if autorization succeeded, false and error otherwise
 func (g GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
-	tokenHead, err := g.extractAuthHeader(r)
+	tokenHead, err := extractAuthHeader(r)
 	if err != nil {
 		return false, err
 	}
 
 	token, err := g.verifyToken(tokenHead)
 	if err != nil {
-		g.Logger.Print(err.Error())
 		return false, err
 	}
 
 	var isValid bool = false
 	isValid, err = g.Strategy.Validate(token)
 	if err != nil || !isValid {
-		g.Logger.Print(err.Error())
 		return false, err
 	}
 
 	return true, nil
-}
-
-// Exctracts the JWT from the Authorization header
-func (g GenericJWTAuthenticator) extractAuthHeader(r *http.Request) (string, error) {
-	authHeader := r.Header.Get("Authorization")
-
-	if authHeader == "" || !strings.HasPrefix(strings.ToUpper(authHeader), "BEARER ") {
-		return "", fmt.Errorf("no authorization header or bearer token provided")
-	}
-
-	return authHeader[7:], nil
 }
 
 // Verifies the integrity of the token (issuer, signature, expiration-time etc.)
@@ -92,7 +75,7 @@ func (g GenericJWTAuthenticator) keyfunc(token *jwt.Token) (any, error) {
 		return "", err
 	}
 
-	certPem := g.certToPem(rawCert)
+	certPem := certToPem(rawCert)
 
 	cert, err := x509.ParseCertificate(certPem.Bytes)
 	if err != nil {
@@ -102,8 +85,19 @@ func (g GenericJWTAuthenticator) keyfunc(token *jwt.Token) (any, error) {
 	return cert.PublicKey, nil
 }
 
+// Exctracts the JWT from the Authorization header
+func extractAuthHeader(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+
+	if authHeader == "" || !strings.HasPrefix(strings.ToUpper(authHeader), "BEARER ") {
+		return "", fmt.Errorf("no authorization header or bearer token provided")
+	}
+
+	return authHeader[7:], nil
+}
+
 // Converts the ASCII-Representation of a certificate to a pem.Block
-func (g GenericJWTAuthenticator) certToPem(rawPem string) *pem.Block {
+func certToPem(rawPem string) *pem.Block {
 	var pemStr string
 	if !strings.HasPrefix(rawPem, pemPrefix) {
 		pemStr = fmt.Sprintf("%s\n%s\n%s", pemPrefix, rawPem, pemPostfix)

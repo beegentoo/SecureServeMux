@@ -18,7 +18,10 @@ type VeryUnsaveDevAuthenticator struct {
 }
 
 func (v VeryUnsaveDevAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
-	log.Print("!!!WARNING!!! You are using the very unsave development authenticator! THIS IS DISCOURAGED IN PRODUCTION MODE!")
+	log.Println("==============================================================================================================")
+	log.Println("                                           !!! WARNING!!!")
+	log.Println("      You are using the very unsave development authenticator! THIS IS DISCOURAGED IN PRODUCTION MODE!")
+	log.Println("==============================================================================================================")
 	authHeader := r.Header.Get("Authorization")
 
 	if authHeader == "" {
