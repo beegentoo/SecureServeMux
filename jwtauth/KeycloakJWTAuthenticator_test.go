@@ -13,7 +13,7 @@ import (
 )
 
 func Test_DemonstrateUsage(t *testing.T) {
-	//t.SkipNow()
+	t.SkipNow()
 
 	// We authenticate using a JWT issued by Keycloak
 	var cut secureservemux.Authenticator = NewKeycloakJWTAuth(
@@ -66,6 +66,9 @@ func obtainDemoToken() (string, error) {
 	}
 
 	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
 
 	respBuf, err := io.ReadAll(resp.Body)
 	if err != nil {
