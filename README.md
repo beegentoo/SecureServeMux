@@ -20,7 +20,7 @@ With SecureServeMux changes to the relevant code are minimal:
 var authenticator Authenticator = jwtauth.NewKeycloakJWTAuth(
   "http://keycloakinstance.local.network",
   "MyDemoRealm",
-  jwtauth.NewRoleBasedAccess()
+  jwtauth.NewRoleBasedAccess("Can_Slash_A")
 )
 
 var serveMux *secureservemux.SecureServeMux = secureservemux.NewSecureServeMux(authenticator)
@@ -37,5 +37,37 @@ The following Authenticators are included
   - `jwtauth.GenericJWTAuthenticator`: A generic Authenticator for JWTs, provided as Bearer-Tokens in the Authorization header
   - `jwtauth.KeycloakJWTAuthenticator`: An authenticator specialized in authenticating using JWTs issued by Keycloak instances
 
+### Using Authenticators standalone
+If you want to use the authenticators as a "standalone" Middleware without using SecureSerrveMux, this is possible.
+
+Here is a very simple example for Gorilla [Gorilla Mux](https://github.com/gorilla/mux):
+```go
+// Define a middleware-function wrapping the Authenticator
+func jwtAuthMiddleware(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    authenticator := jwtauth.NewKeycloakJWTAuth(
+      "https://keycloak.my.network",
+      "MyKeycloakRealm",
+      jwtauth.NewRoleBasedAccess("Editor")
+    )
+
+    // Call the Authenticate() function
+    isAuthed, authErr := authenticator.Authorize(w http.ResponseWriter, r *http.Request)
+    if !isAuthend || authErr != nil {
+      // Authorization failed. Fail with 403 Forbidden, redirect to a login, etc
+      w.WriteHeader(http.StatusForbidden)
+      return
+    }
+
+    // Authorization succeeded - continue to next handler
+    next.ServeHTTTP(w, r)
+  })
+}
+
+// Use the middleware function
+router := mux.NewRouter()
+router.Use(jwtAuthMiddleware)
+router.HandleFunc("/editor", handleEditorRequest).Methods("GET")
+```
 ## Authorization Strategies
 Authorization Strategies are additional authorizations for JWTs. Currently, there's only one strategy named `RoleBasedAccess`. It keeps a list of Role-Names and checks if a token has all these Roles assigned
