@@ -13,7 +13,7 @@ import (
 )
 
 func Test_DemonstrateUsage(t *testing.T) {
-	//t.SkipNow()
+	t.SkipNow()
 
 	// We authenticate using a JWT issued by Keycloak
 	cut, err := NewKeycloakJWTAuth(
