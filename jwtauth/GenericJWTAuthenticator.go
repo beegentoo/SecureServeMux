@@ -103,6 +103,11 @@ func extractAuthHeader(r *http.Request) (string, error) {
 		return "", fmt.Errorf("no authorization header or bearer token provided")
 	}
 
+	token := authHeader[7:]
+	if token == "" {
+		return "", fmt.Errorf("empty token provided")
+	}
+
 	return authHeader[7:], nil
 }
 

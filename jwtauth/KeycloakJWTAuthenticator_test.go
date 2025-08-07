@@ -54,7 +54,7 @@ func obtainDemoToken() (string, error) {
 	tokenEndpointUrl := "http://localhost:8090/realms/DemoRealm/protocol/openid-connect/token"
 	grantType := "client_credentials"
 	clientId := "TestClient"
-	clientSecret := "0JOgagogLtLHCKm9MQEdLxPdqxiLJcUv" // When testing, place the client-secret here
+	clientSecret := "PLACE YOUR CLIENT SECRET HERE" // When testing, place the client-secret here
 
 	requestPayload := fmt.Sprintf("grant_type=%s&client_id=%s&client_secret=%s", grantType, clientId, clientSecret)
 
