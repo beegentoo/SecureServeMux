@@ -16,12 +16,17 @@ const pemPostfix = "-----END CERTIFICATE-----"
 // Function used to retrieve the Issuer-Certificate from... somewhere...
 type CertRetrieverFunc func(token *jwt.Token) (string, error)
 
-func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFunc, strategy AuthorizationStrategy) GenericJWTAuthenticator {
-	return GenericJWTAuthenticator{
+// Create a new GenericJWTAuthenticator.
+func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFunc, strategy AuthorizationStrategy) (*GenericJWTAuthenticator, error) {
+	if certRetrieverFunc == nil {
+		return nil, fmt.Errorf("certificate retriever function must not be nil")
+	}
+
+	return &GenericJWTAuthenticator{
 		Issuer:            issuer,
 		CertRetrieverFunc: certRetrieverFunc,
 		Strategy:          strategy,
-	}
+	}, nil
 }
 
 // A Generic JWT Authenticator extracts a JWT from the Authorization-Header (Bearer Token).
@@ -31,15 +36,18 @@ func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFu
 // The CertRetrieverFunc should return a string-representation of a Certificate (with or without
 // header- and footer-line)
 type GenericJWTAuthenticator struct {
-	Issuer            string                // Issuer to expect
-	CertRetrieverFunc CertRetrieverFunc     // Function to retrieve the issuer certificate
-	Strategy          AuthorizationStrategy // Authorization strategy to be used
+	// Issuer to expect
+	Issuer string
+	// Function to retrieve the issuer certificate
+	CertRetrieverFunc CertRetrieverFunc
+	// Authorization strategy to be used. This may be nil if just the token's integrity should be validated
+	Strategy AuthorizationStrategy
 }
 
 // Performs authorization of a request.
 //
 // Returns true and no error if autorization succeeded, false and error otherwise
-func (g GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
+func (g *GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
 	tokenHead, err := extractAuthHeader(r)
 	if err != nil {
 		return false, err
@@ -50,17 +58,19 @@ func (g GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Reques
 		return false, err
 	}
 
-	var isValid bool = false
-	isValid, err = g.Strategy.Validate(token)
-	if err != nil || !isValid {
-		return false, err
+	var isValid bool = true
+	if g.Strategy != nil {
+		isValid, err = g.Strategy.Validate(token)
+		if err != nil || !isValid {
+			return false, err
+		}
 	}
 
 	return true, nil
 }
 
 // Verifies the integrity of the token (issuer, signature, expiration-time etc.)
-func (g GenericJWTAuthenticator) verifyToken(token string) (*jwt.Token, error) {
+func (g *GenericJWTAuthenticator) verifyToken(token string) (*jwt.Token, error) {
 	parsedToken, err := jwt.Parse(token, g.keyfunc, jwt.WithIssuer(g.Issuer))
 	if err != nil {
 		return nil, err
@@ -69,7 +79,7 @@ func (g GenericJWTAuthenticator) verifyToken(token string) (*jwt.Token, error) {
 }
 
 // Retrieves the public-key of the key-pair which was used to sign the JWT
-func (g GenericJWTAuthenticator) keyfunc(token *jwt.Token) (any, error) {
+func (g *GenericJWTAuthenticator) keyfunc(token *jwt.Token) (any, error) {
 	rawCert, err := g.CertRetrieverFunc(token)
 	if err != nil {
 		return "", err

@@ -10,7 +10,7 @@ import (
 )
 
 // Creates a new KeycloakJWT-Authenticator
-func NewKeycloakJWTAuth(url string, realm string, strategy AuthorizationStrategy) KeycloakJWTAuthenticator {
+func NewKeycloakJWTAuth(url string, realm string, strategy AuthorizationStrategy) (*KeycloakJWTAuthenticator, error) {
 
 	// We retrieve the certificate from the issuing Keycloak-Instance and -realm
 	var certRetrieverFunc CertRetrieverFunc = func(token *jwt.Token) (string, error) {
@@ -31,21 +31,26 @@ func NewKeycloakJWTAuth(url string, realm string, strategy AuthorizationStrategy
 		return effectiveKs.X5c[0], nil
 	}
 
-	kka := KeycloakJWTAuthenticator{
-		Url:   url,
-		Realm: realm,
-		GenericJWTAuthenticator: NewGenericJWTAuthenticator(
-			fmt.Sprintf("%s/realms/%s", url, realm),
-			certRetrieverFunc,
-			strategy,
-		),
+	genAuth, err := NewGenericJWTAuthenticator(
+		fmt.Sprintf("%s/realms/%s", url, realm),
+		certRetrieverFunc,
+		strategy,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return kka
+
+	kka := &KeycloakJWTAuthenticator{
+		Url:                     url,
+		Realm:                   realm,
+		GenericJWTAuthenticator: genAuth,
+	}
+	return kka, nil
 }
 
 // Authenticates a JWT issued by a Keycloak Instance
 type KeycloakJWTAuthenticator struct {
-	GenericJWTAuthenticator
+	*GenericJWTAuthenticator
 	Url   string // Base URL of the keycloak instance to use
 	Realm string // Realm that managed the authentication
 }
