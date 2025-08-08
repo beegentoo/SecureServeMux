@@ -52,15 +52,15 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
     )
 
     // Call the Authenticate() function
-    isAuthed, authErr := authenticator.Authorize(w http.ResponseWriter, r *http.Request)
-    if !isAuthend || authErr != nil {
+    authorizedRequest, authErr := authenticator.Authorize(w http.ResponseWriter, r *http.Request)
+    if authorizedRequest == nil || authErr != nil {
       // Authorization failed. Fail with 403 Forbidden, redirect to a login, etc
       w.WriteHeader(http.StatusForbidden)
       return
     }
 
     // Authorization succeeded - continue to next handler
-    next.ServeHTTTP(w, r)
+    next.ServeHTTP(w, r)
   })
 }
 
@@ -68,6 +68,30 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 router := mux.NewRouter()
 router.Use(jwtAuthMiddleware)
 router.HandleFunc("/editor", handleEditorRequest).Methods("GET")
+```
+
+### Metadata obtained during authorization
+Upon successful authorization, an Authenticator may populate the original `http.Request`'s context with additional data. For example, if you use the KeycloakJWTAuthenticator and you have a specific field added to your token's scope which you would like to use in your application you may access this like this:
+```go
+// ....
+// Initialization of a SecureServeMux using KeycloakJWTAuthenticator
+// ....
+
+mux.AuthHandleFunc("GET /customerInfo", func(w http.ResponseWriter, r *http.Request) {
+  // The JWT send by Keycloak contains an additional field (these have to be added in the appropriate scope)
+	var mapClaims jwt.MapClaims = r.Context().Value("jwtClaims").(jwt.MapClaims)
+	customerNo, isSet := mapClaims["customerNo"]
+
+  // Some API to an imaginary ERP-Systen
+  var erp *SuperERP = NewSuperERP()
+
+  customerInfo := erp.GetCustomerInfo(customerNo)
+
+  // ....
+  // function ends, customerInfo is send in the response, whatever
+  // ....
+})
+
 ```
 ## Authorization Strategies
 Authorization Strategies are additional authorizations for JWTs. Currently, there's only one strategy named `RoleBasedAccess`. It keeps a list of Role-Names and checks if a token has all these Roles assigned

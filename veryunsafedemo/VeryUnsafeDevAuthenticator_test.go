@@ -45,4 +45,5 @@ func Test_Authorize_Succeed(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Error("auth should have succeeded")
 	}
+
 }

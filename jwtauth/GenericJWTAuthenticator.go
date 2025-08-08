@@ -1,6 +1,7 @@
 package jwtauth
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -35,6 +36,8 @@ func NewGenericJWTAuthenticator(issuer string, certRetrieverFunc CertRetrieverFu
 //
 // The CertRetrieverFunc should return a string-representation of a Certificate (with or without
 // header- and footer-line)
+//
+// On successful authorization of the Token, the Request will be modified and contain a key "jwtclaims" containing a jwt.MapClaims
 type GenericJWTAuthenticator struct {
 	// Issuer to expect
 	Issuer string
@@ -47,26 +50,28 @@ type GenericJWTAuthenticator struct {
 // Performs authorization of a request.
 //
 // Returns true and no error if autorization succeeded, false and error otherwise
-func (g *GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
+func (g *GenericJWTAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	tokenHead, err := extractAuthHeader(r)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	token, err := g.verifyToken(tokenHead)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	var isValid bool = true
 	if g.Strategy != nil {
 		isValid, err = g.Strategy.Validate(token)
 		if err != nil || !isValid {
-			return false, err
+			return nil, err
 		}
 	}
 
-	return true, nil
+	ctx := context.WithValue(r.Context(), "jwtclaims", token.Claims.(jwt.MapClaims))
+	newReq := r.WithContext(ctx)
+	return newReq, nil
 }
 
 // Verifies the integrity of the token (issuer, signature, expiration-time etc.)

@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	secureservemux "github.com/beegentoo/SecureServeMux"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func Test_DemonstrateUsage(t *testing.T) {
-	t.SkipNow()
+	//t.SkipNow()
 
 	// We authenticate using a JWT issued by Keycloak
 	cut, err := NewKeycloakJWTAuth(
@@ -28,7 +29,15 @@ func Test_DemonstrateUsage(t *testing.T) {
 	// Create a new secured handler for /test
 	mux := secureservemux.NewSecureServeMux(cut)
 	mux.AuthHandleFunc("GET /test", func(w http.ResponseWriter, r *http.Request) {
-		// Nothing happens here
+		var mapClaims jwt.MapClaims = r.Context().Value("jwtClaims").(jwt.MapClaims)
+		fvVal, isSet := mapClaims["fixedValue"]
+		if !isSet {
+			t.Fatal("Special Value in Token should be there")
+		}
+
+		if fvVal != "2223" {
+			t.Fatal("wrong value in token")
+		}
 	})
 
 	req, err := http.NewRequest(http.MethodGet, "/test", nil)
@@ -54,7 +63,7 @@ func obtainDemoToken() (string, error) {
 	tokenEndpointUrl := "http://localhost:8090/realms/DemoRealm/protocol/openid-connect/token"
 	grantType := "client_credentials"
 	clientId := "TestClient"
-	clientSecret := "PLACE YOUR CLIENT SECRET HERE" // When testing, place the client-secret here
+	clientSecret := "0JOgagogLtLHCKm9MQEdLxPdqxiLJcUv" // When testing, place the client-secret here
 
 	requestPayload := fmt.Sprintf("grant_type=%s&client_id=%s&client_secret=%s", grantType, clientId, clientSecret)
 

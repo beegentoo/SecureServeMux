@@ -1,10 +1,10 @@
 package veryunsafedemo
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 )
 
 // This is a very unsafe authenticator which is used
@@ -17,7 +17,7 @@ type VeryUnsaveDevAuthenticator struct {
 	// No elements
 }
 
-func (v VeryUnsaveDevAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (bool, error) {
+func (v VeryUnsaveDevAuthenticator) Authorize(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	log.Println("==============================================================================================================")
 	log.Println("                                           !!! WARNING!!!")
 	log.Println("      You are using the very unsave development authenticator! THIS IS DISCOURAGED IN PRODUCTION MODE!")
@@ -25,9 +25,13 @@ func (v VeryUnsaveDevAuthenticator) Authorize(w http.ResponseWriter, r *http.Req
 	authHeader := r.Header.Get("Authorization")
 
 	if authHeader == "" {
-		return false, fmt.Errorf("no valid Authorization header provided")
+		return nil, fmt.Errorf("no valid Authorization header provided")
 	}
 
-	return (strings.ToUpper(authHeader) == "THIS IS UNSAVE!"), nil
+	ctx := context.WithValue(r.Context(), "authenticated", true)
+
+	newRequest := r.WithContext(ctx)
+
+	return newRequest, nil
 
 }
